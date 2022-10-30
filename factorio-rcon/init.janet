@@ -33,7 +33,7 @@
   (put packet :size (ffi/read :int32 (net/read connection 4)))
   (put packet :id (ffi/read :int32 (net/read connection 4)))
   (put packet :type (ffi/read :int32 (net/read connection 4)))
-  (def buf (net/read connection (- (packet :size) packetHeaderSize)))
+  (def buf (net/chunk connection (- (packet :size) packetHeaderSize)))
   (put packet :body (string/trimr (string buf) "\0"))
   packet)
 
@@ -45,7 +45,7 @@
   (write-packet connection packet)
   (def response (read-packet connection))
   (if (not= (response :id) (packet :id)) (error "rcon: packets from server received out of order"))
-  response)
+  (response :body))
 
 (defn authenticate [connection password]
   (def packet (new-packet (packet-types :auth) password))
