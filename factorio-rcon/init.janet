@@ -12,15 +12,15 @@
 
 (defn new-packet [typ body]
   {:size (+ (length body) packetHeaderSize packetPaddingSize)
-   :id (ffi/read :int32 (os/cryptorand 4))
+   :id (first (peg/match ~(int 4) (os/cryptorand 4)))
    :type typ
    :body body})
 
 (defn encode-packet [packet]
   (def buf (buffer/new (+ (packet :size) packetHeaderFieldSize)))
-  (buffer/push buf (ffi/write :int32 (packet :size)))
-  (buffer/push buf (ffi/write :int32 (packet :id)))
-  (buffer/push buf (ffi/write :int32 (packet :type)))
+  (buffer/push buf (slice (int/to-bytes (int/s64 (packet :size)) :le) 0 4))
+  (buffer/push buf (slice (int/to-bytes (int/s64 (packet :id)) :le) 0 4))
+  (buffer/push buf (slice (int/to-bytes (int/s64 (packet :type)) :le) 0 4))
   (buffer/push buf (packet :body))
   (buffer/push buf "\0") # NULL-terminated string
   (buffer/push buf "\0") # Write padding
@@ -30,9 +30,9 @@
 
 (defn read-packet [connection]
   (def packet @{})
-  (put packet :size (ffi/read :int32 (net/read connection 4)))
-  (put packet :id (ffi/read :int32 (net/read connection 4)))
-  (put packet :type (ffi/read :int32 (net/read connection 4)))
+  (put packet :size (first (peg/match ~(int 4) (net/read connection 4))))
+  (put packet :id (first (peg/match ~(int 4) (net/read connection 4))))
+  (put packet :type (first (peg/match ~(int 4) (net/read connection 4))))
   (def buf (net/chunk connection (- (packet :size) packetHeaderSize)))
   (put packet :body (string/trimr (string buf) "\0"))
   packet)
